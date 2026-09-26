@@ -1,0 +1,8 @@
+{
+  "name": "UNIKO-RD",
+  "description": "El marketplace oficial de República Dominicana. Compra, vende y conecta con comercios verificados y servicios locales.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
