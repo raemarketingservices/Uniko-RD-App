@@ -20,12 +20,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.data.ProductEntity
 import com.example.ui.Screen
 import com.example.ui.UnikoViewModel
@@ -97,20 +99,12 @@ fun ProductsScreen(
                         }
 
                         // Logo emblem
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(CrimsonAccent),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Storefront,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_uniko_logo_square),
+                            contentDescription = "UNIKO-RD",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.width(42.dp)
+                        )
 
                         Text(
                             text = "Productos",

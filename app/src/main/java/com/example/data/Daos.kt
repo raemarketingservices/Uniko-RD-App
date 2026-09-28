@@ -22,6 +22,9 @@ interface ProductDao {
 
     @Delete
     suspend fun deleteProduct(product: ProductEntity)
+
+    @Query("DELETE FROM products")
+    suspend fun deleteAllProducts()
 }
 
 @Dao
@@ -61,6 +64,9 @@ interface ServiceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertService(service: ServiceEntity)
+
+    @Query("DELETE FROM services")
+    suspend fun deleteAllServices()
 }
 
 @Dao

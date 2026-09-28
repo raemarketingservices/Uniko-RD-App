@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class UnikoRepository(private val db: AppDatabase) {
 
@@ -55,6 +56,33 @@ class UnikoRepository(private val db: AppDatabase) {
             db.cartDao().addToCart(CartItemEntity("prod_sony_xm5", 1))
             db.cartDao().addToCart(CartItemEntity("prod_oster_latte", 1))
             db.cartDao().addToCart(CartItemEntity("prod_nike_airmax", 1))
+        }
+    }
+
+    suspend fun sincronizarRemoto(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val cats = Remoto.categorias()
+            val tiendas = Remoto.tiendas()
+            val productos = Remoto.productos(cats)
+            val servicios = Remoto.servicios(cats)
+            if (tiendas.isEmpty() && productos.isEmpty() && servicios.isEmpty()) {
+                return@withContext false
+            }
+            if (tiendas.isNotEmpty()) {
+                db.storeDao().deleteAllStores()
+                db.storeDao().insertStores(tiendas)
+            }
+            if (productos.isNotEmpty()) {
+                db.productDao().deleteAllProducts()
+                db.productDao().insertProducts(productos)
+            }
+            if (servicios.isNotEmpty()) {
+                db.serviceDao().deleteAllServices()
+                db.serviceDao().insertServices(servicios)
+            }
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 

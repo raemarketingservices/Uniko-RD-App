@@ -93,6 +93,8 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
     val userRatings = MutableStateFlow<Map<String, Int>>(emptyMap())
 
     // Chatbot conversations
+    val datosRemotos = MutableStateFlow(false)
+    val sincronizando = MutableStateFlow(false)
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(
         listOf(
             ChatMessage(
@@ -107,6 +109,15 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             repository.seedInitialDataIfEmpty()
+            refrescar()
+        }
+    }
+
+    fun refrescar() {
+        viewModelScope.launch {
+            sincronizando.value = true
+            datosRemotos.value = repository.sincronizarRemoto()
+            sincronizando.value = false
         }
     }
 

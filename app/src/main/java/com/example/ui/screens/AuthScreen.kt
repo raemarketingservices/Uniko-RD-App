@@ -143,7 +143,7 @@ fun AuthScreen(
 
                         // Official UNIKO-RD Logo in Center
                         Image(
-                            painter = painterResource(id = R.drawable.uniko_logo_full),
+                            painter = painterResource(id = R.drawable.uniko_logo_header),
                             contentDescription = "UNIKO-RD",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
@@ -860,7 +860,7 @@ fun AuthScreen(
                         modifier = Modifier.fillMaxSize().padding(4.dp)
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.uniko_logo_full),
+                            painter = painterResource(id = R.drawable.ic_uniko_logo_square),
                             contentDescription = "Asistente UNIKO-RD",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize()
