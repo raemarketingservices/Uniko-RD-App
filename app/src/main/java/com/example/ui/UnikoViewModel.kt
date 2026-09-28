@@ -1,12 +1,15 @@
 package com.example.ui
 
 import android.app.Application
+import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed class Screen {
     object Home : Screen()
@@ -19,6 +22,7 @@ sealed class Screen {
     object PublishProduct : Screen()
     object Auth : Screen()
     object Admin : Screen()
+    data class Legal(val doc: String) : Screen()
 }
 
 enum class BottomTab {
@@ -69,7 +73,7 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
             is Screen.Products, is Screen.ProductDetail -> BottomTab.PRODUCTOS
             is Screen.Services, is Screen.ServiceDetail -> BottomTab.SERVICIOS
             is Screen.Stores, is Screen.StoreProfile -> BottomTab.TIENDAS
-            is Screen.Auth, is Screen.Admin -> BottomTab.CUENTA
+            is Screen.Auth, is Screen.Admin, is Screen.Legal -> BottomTab.CUENTA
             else -> BottomTab.INICIO
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BottomTab.INICIO)
@@ -87,6 +91,12 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
     val isCartSheetVisible = MutableStateFlow(false)
     val isChatbotVisible = MutableStateFlow(false)
     val notification = MutableStateFlow<UiNotification?>(null)
+
+    private val _usuario = MutableStateFlow<UsuarioSesion?>(null)
+    val usuario: StateFlow<UsuarioSesion?> = _usuario.asStateFlow()
+
+    private val _autenticando = MutableStateFlow(false)
+    val autenticando: StateFlow<Boolean> = _autenticando.asStateFlow()
 
     // Followed stores in session
     val followedStoreIds = MutableStateFlow<Set<String>>(emptySet())
@@ -111,6 +121,134 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
             repository.seedInitialDataIfEmpty()
             refrescar()
         }
+        restaurarSesion()
+    }
+
+    private fun restaurarSesion() {
+        val guardada = SesionStore.cargar(getApplication()) ?: return
+        val expiro = guardada.expiraEn in 1 until System.currentTimeMillis()
+        if (!expiro) {
+            _usuario.value = guardada
+            return
+        }
+        if (guardada.refreshToken.isEmpty()) {
+            SesionStore.borrar(getApplication())
+            return
+        }
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) { Remoto.refrescar(guardada.refreshToken) }
+            if (r.ok && r.usuario != null) {
+                SesionStore.guardar(getApplication(), r.usuario)
+                _usuario.value = r.usuario
+            } else {
+                SesionStore.borrar(getApplication())
+            }
+        }
+    }
+
+    fun registrarse(
+        email: String,
+        password: String,
+        nombres: String,
+        apellidos: String,
+        cedula: String,
+        telefono: String,
+        esTienda: Boolean,
+        aceptaTerminos: Boolean,
+        aceptaMarketing: Boolean
+    ) {
+        val emailLimpio = email.trim()
+        when {
+            nombres.isBlank() || apellidos.isBlank() -> {
+                showToast("Escribe tus nombres y apellidos.", isSuccess = false)
+                return
+            }
+            !Patterns.EMAIL_ADDRESS.matcher(emailLimpio).matches() -> {
+                showToast("Escribe un correo electrónico válido.", isSuccess = false)
+                return
+            }
+            password.length < 6 -> {
+                showToast("La contraseña debe tener al menos 6 caracteres.", isSuccess = false)
+                return
+            }
+            !aceptaTerminos -> {
+                showToast("Debes aceptar los Términos y la Política de Privacidad.", isSuccess = false)
+                return
+            }
+        }
+        viewModelScope.launch {
+            _autenticando.value = true
+            val r = withContext(Dispatchers.IO) {
+                Remoto.registrar(
+                    email = emailLimpio,
+                    password = password,
+                    nombres = nombres.trim(),
+                    apellidos = apellidos.trim(),
+                    cedula = cedula.trim(),
+                    telefono = telefono.trim(),
+                    esTienda = esTienda,
+                    aceptaTerminos = aceptaTerminos,
+                    aceptaMarketing = aceptaMarketing
+                )
+            }
+            _autenticando.value = false
+            when {
+                r.ok && r.usuario != null -> {
+                    SesionStore.guardar(getApplication(), r.usuario)
+                    _usuario.value = r.usuario
+                    showToast("¡Cuenta creada! Bienvenido/a a UNIKO-RD 🇩🇴")
+                }
+                r.ok && r.requiereConfirmacion ->
+                    showToast("Cuenta creada. Revisa tu correo para confirmarla.")
+                else -> showToast(r.error ?: "No se pudo crear la cuenta.", isSuccess = false)
+            }
+        }
+    }
+
+    fun entrar(email: String, password: String) {
+        val emailLimpio = email.trim()
+        if (!Patterns.EMAIL_ADDRESS.matcher(emailLimpio).matches()) {
+            showToast("Escribe un correo electrónico válido.", isSuccess = false)
+            return
+        }
+        if (password.isEmpty()) {
+            showToast("Escribe tu contraseña.", isSuccess = false)
+            return
+        }
+        viewModelScope.launch {
+            _autenticando.value = true
+            val r = withContext(Dispatchers.IO) { Remoto.entrar(emailLimpio, password) }
+            _autenticando.value = false
+            if (r.ok && r.usuario != null) {
+                SesionStore.guardar(getApplication(), r.usuario)
+                _usuario.value = r.usuario
+                showToast("¡Bienvenido/a de vuelta a UNIKO-RD!")
+            } else {
+                showToast(r.error ?: "No se pudo iniciar sesión.", isSuccess = false)
+            }
+        }
+    }
+
+    fun recuperarContrasena(email: String) {
+        val emailLimpio = email.trim()
+        if (!Patterns.EMAIL_ADDRESS.matcher(emailLimpio).matches()) {
+            showToast("Escribe tu correo en el campo de correo.", isSuccess = false)
+            return
+        }
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) { Remoto.recuperar(emailLimpio) }
+            if (r.ok) {
+                showToast("Te enviamos un enlace de recuperación a tu correo.")
+            } else {
+                showToast(r.error ?: "No se pudo enviar el correo.", isSuccess = false)
+            }
+        }
+    }
+
+    fun cerrarSesion() {
+        SesionStore.borrar(getApplication())
+        _usuario.value = null
+        showToast("Sesión cerrada.")
     }
 
     fun refrescar() {

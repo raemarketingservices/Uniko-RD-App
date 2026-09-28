@@ -109,6 +109,7 @@ fun UnikoApp(viewModel: UnikoViewModel = viewModel()) {
                     )
                     is Screen.PublishProduct -> PublishProductScreen(viewModel = viewModel)
                     is Screen.Auth -> AuthScreen(viewModel = viewModel)
+                    is Screen.Legal -> LegalDocScreen(doc = target.doc, viewModel = viewModel)
                     is Screen.Admin -> AdminScreen(viewModel = viewModel)
                 }
             }

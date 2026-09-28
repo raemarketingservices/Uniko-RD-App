@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -21,9 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.UsuarioSesion
 import com.example.ui.Screen
 import com.example.ui.UnikoViewModel
 import com.example.ui.theme.*
@@ -58,6 +61,12 @@ fun AuthScreen(
     var regProvince by remember { mutableStateOf("Selecciona...") }
     var regEmail by remember { mutableStateOf("") }
     var regPassword by remember { mutableStateOf("") }
+
+    var aceptaTerminos by remember { mutableStateOf(false) }
+    var aceptaMarketing by remember { mutableStateOf(false) }
+
+    val usuario by viewModel.usuario.collectAsState()
+    val autenticando by viewModel.autenticando.collectAsState()
 
     var categoryDropdownExpanded by remember { mutableStateOf(false) }
     var provinceDropdownExpanded by remember { mutableStateOf(false) }
@@ -245,7 +254,11 @@ fun AuthScreen(
                     // Header: Title & Subtitle matching the screenshot:
                     Column {
                         Text(
-                            text = if (isLoginMode) "Inicia sesión" else "Crea tu cuenta",
+                            text = when {
+                                usuario != null -> "Mi cuenta"
+                                isLoginMode -> "Inicia sesión"
+                                else -> "Crea tu cuenta"
+                            },
                             fontWeight = FontWeight.Bold,
                             fontSize = 24.sp,
                             color = DeepNavyBlue,
@@ -253,69 +266,77 @@ fun AuthScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (isLoginMode)
-                                "Entra para comprar, vender y conectar en República Dominicana."
-                            else
-                                "Únete a UNIKO-RD en un minuto. Sin costo.",
+                            text = when {
+                                usuario != null -> "Tu sesión activa en UNIKO-RD."
+                                isLoginMode -> "Entra para comprar, vender y conectar en República Dominicana."
+                                else -> "Únete a UNIKO-RD en un minuto. Sin costo."
+                            },
                             fontSize = 13.sp,
                             color = Color(0xFF6B7280),
                             lineHeight = 18.sp
                         )
                     }
 
-                    // SEGMENTED TOGGLE PILL: "Entrar" | "Crear cuenta"
-                    Surface(
-                        color = Color(0xFFF3F4F6),
-                        shape = RoundedCornerShape(30.dp),
-                        border = BorderStroke(1.dp, FieldBorderColor),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        Row(
+                    if (usuario == null) {
+                        // SEGMENTED TOGGLE PILL: "Entrar" | "Crear cuenta"
+                        Surface(
+                            color = Color(0xFFF3F4F6),
+                            shape = RoundedCornerShape(30.dp),
+                            border = BorderStroke(1.dp, FieldBorderColor),
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(4.dp)
+                                .fillMaxWidth()
+                                .height(48.dp)
                         ) {
-                            Box(
+                            Row(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(if (isLoginMode) DeepNavyBlue else Color.Transparent)
-                                    .clickable { isLoginMode = true }
-                                    .testTag("toggle_entrar"),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxSize()
+                                    .padding(4.dp)
                             ) {
-                                Text(
-                                    text = "Entrar",
-                                    color = if (isLoginMode) Color.White else Color(0xFF4B5563),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                            }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(if (isLoginMode) DeepNavyBlue else Color.Transparent)
+                                        .clickable { isLoginMode = true }
+                                        .testTag("toggle_entrar"),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Entrar",
+                                        color = if (isLoginMode) Color.White else Color(0xFF4B5563),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
 
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(if (!isLoginMode) DeepNavyBlue else Color.Transparent)
-                                    .clickable { isLoginMode = false }
-                                    .testTag("toggle_crear_cuenta"),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Crear cuenta",
-                                    color = if (!isLoginMode) Color.White else Color(0xFF4B5563),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(if (!isLoginMode) DeepNavyBlue else Color.Transparent)
+                                        .clickable { isLoginMode = false }
+                                        .testTag("toggle_crear_cuenta"),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Crear cuenta",
+                                        color = if (!isLoginMode) Color.White else Color(0xFF4B5563),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
                             }
                         }
                     }
 
-                    if (!isLoginMode) {
+                    if (usuario != null) {
+                        CuentaIniciadaCard(
+                            usuario = usuario!!,
+                            viewModel = viewModel
+                        )
+                    } else if (!isLoginMode) {
                         // =================== CREAR CUENTA FORM ===================
 
                         // Section: TIPO DE CUENTA
@@ -674,12 +695,88 @@ fun AuthScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
+                        // CONSENTIMIENTO LEGAL (Ley 158-13)
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("chk_terminos")
+                                    .clickable { aceptaTerminos = !aceptaTerminos }
+                            ) {
+                                Checkbox(
+                                    checked = aceptaTerminos,
+                                    onCheckedChange = { aceptaTerminos = it },
+                                    colors = CheckboxDefaults.colors(checkedColor = CrimsonAccent)
+                                )
+                                Text(
+                                    text = "He leído y acepto los Términos y Condiciones y la Política de Privacidad (obligatorio).",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF374151),
+                                    lineHeight = 16.sp
+                                )
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.padding(start = 48.dp)
+                            ) {
+                                Text(
+                                    text = "Términos y Condiciones",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DeepNavyBlue,
+                                    textDecoration = TextDecoration.Underline,
+                                    modifier = Modifier.clickable { viewModel.navigateTo(Screen.Legal("terminos")) }
+                                )
+                                Text(
+                                    text = "Política de Privacidad",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DeepNavyBlue,
+                                    textDecoration = TextDecoration.Underline,
+                                    modifier = Modifier.clickable { viewModel.navigateTo(Screen.Legal("privacidad")) }
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { aceptaMarketing = !aceptaMarketing }
+                            ) {
+                                Checkbox(
+                                    checked = aceptaMarketing,
+                                    onCheckedChange = { aceptaMarketing = it },
+                                    colors = CheckboxDefaults.colors(checkedColor = CrimsonAccent)
+                                )
+                                Text(
+                                    text = "Quiero recibir ofertas y novedades de UNIKO-RD. Puedo revocarlo cuando quiera.",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF374151),
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
                         // SUBMIT BUTTON (Vibrant Red)
                         Button(
                             onClick = {
-                                viewModel.showToast("¡Cuenta ${if (accountType == "store") "de Tienda" else "de Usuario"} creada en UNIKO-RD!")
-                                viewModel.navigateTo(Screen.Home)
+                                viewModel.registrarse(
+                                    email = regEmail,
+                                    password = regPassword,
+                                    nombres = regFirstName,
+                                    apellidos = regLastName,
+                                    cedula = regCedula,
+                                    telefono = regPhone,
+                                    esTienda = accountType == "store",
+                                    aceptaTerminos = aceptaTerminos,
+                                    aceptaMarketing = aceptaMarketing
+                                )
                             },
+                            enabled = !autenticando,
                             colors = ButtonDefaults.buttonColors(containerColor = CrimsonAccent),
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier
@@ -687,19 +784,27 @@ fun AuthScreen(
                                 .height(50.dp)
                                 .testTag("btn_crear_cuenta_submit")
                         ) {
-                            Icon(
-                                imageVector = if (accountType == "store") Icons.Default.Storefront else Icons.Default.PersonAdd,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (accountType == "store") "Crear cuenta y tienda" else "Crear cuenta de Usuario",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
+                            if (autenticando) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (accountType == "store") Icons.Default.Storefront else Icons.Default.PersonAdd,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (accountType == "store") "Crear cuenta y tienda" else "Crear cuenta de Usuario",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
 
                     } else {
@@ -730,7 +835,7 @@ fun AuthScreen(
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = DeepNavyBlue,
-                                    modifier = Modifier.clickable { viewModel.showToast("Enlace de recuperación enviado a tu correo.") }
+                                    modifier = Modifier.clickable { viewModel.recuperarContrasena(loginEmail) }
                                 )
                             }
                             OutlinedTextField(
@@ -764,10 +869,8 @@ fun AuthScreen(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Button(
-                            onClick = {
-                                viewModel.showToast("¡Bienvenido de vuelta a UNIKO-RD!")
-                                viewModel.navigateTo(Screen.Home)
-                            },
+                            onClick = { viewModel.entrar(loginEmail, loginPassword) },
+                            enabled = !autenticando,
                             colors = ButtonDefaults.buttonColors(containerColor = CrimsonAccent),
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier
@@ -775,9 +878,17 @@ fun AuthScreen(
                                 .height(50.dp)
                                 .testTag("btn_entrar_submit")
                         ) {
-                            Icon(imageVector = Icons.Default.Login, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Entrar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            if (autenticando) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(imageVector = Icons.Default.Login, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Entrar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
                         }
 
                         // SuperAdmin quick entry
@@ -824,8 +935,45 @@ fun AuthScreen(
                     Text("Conexión Encriptada SSL · Servidores en la Nube", fontSize = 11.sp, color = Color(0xFF6B7280))
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    Text(
+                        text = "Términos",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepNavyBlue,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable { viewModel.navigateTo(Screen.Legal("terminos")) }
+                    )
+                    Text(
+                        text = "Privacidad",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepNavyBlue,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable { viewModel.navigateTo(Screen.Legal("privacidad")) }
+                    )
+                    Text(
+                        text = "Cookies",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepNavyBlue,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable { viewModel.navigateTo(Screen.Legal("cookies")) }
+                    )
+                    Text(
+                        text = "Aviso",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepNavyBlue,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable { viewModel.navigateTo(Screen.Legal("aviso")) }
+                    )
+                }
                 Text(
-                    text = "Al continuar aceptas los términos y condiciones de UNIKO-RD y las leyes de comercio digital de Rep. Dominicana.",
+                    text = "Consentimiento bajo la Ley 158-13: puedes revocarlo cuando quieras. RAE Marketing Services · Rep. Dominicana.",
                     fontSize = 11.sp,
                     color = Color(0xFF9CA3AF),
                     textAlign = TextAlign.Center
@@ -868,6 +1016,209 @@ fun AuthScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CuentaIniciadaCard(
+    usuario: UsuarioSesion,
+    viewModel: UnikoViewModel
+) {
+    val iniciales = remember(usuario.nombre) {
+        usuario.nombre.trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotEmpty() }
+            .take(2)
+            .joinToString("") { it.first().uppercase() }
+            .ifEmpty { "U" }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = CardSelectedPinkBg,
+                border = BorderStroke(1.5.dp, CardSelectedBorderRed),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = iniciales,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = CardSelectedBorderRed
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = usuario.nombre.ifBlank { "Usuario UNIKO" },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = DeepNavyBlue
+                )
+                Text(
+                    text = usuario.email,
+                    fontSize = 12.sp,
+                    color = Color(0xFF6B7280)
+                )
+            }
+            Surface(
+                color = CardSelectedPinkBg,
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, CardSelectedBorderRed.copy(alpha = 0.5f))
+            ) {
+                Text(
+                    text = if (usuario.tipo == "store") "Vendedor(a)" else "Comprador/a",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CardSelectedBorderRed,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+        }
+
+        Surface(
+            color = Color(0xFFF3F4F6),
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = SuccessGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Sesión activa en este dispositivo",
+                        fontSize = 12.sp,
+                        color = Color(0xFF374151)
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.MailOutline,
+                        contentDescription = null,
+                        tint = DeepNavyBlue,
+                        modifier = Modifier.size(16.dp)
+                    )
+                        Text(
+                            text = "Soporte: raemarketingservices@gmail.com",
+                        fontSize = 12.sp,
+                        color = Color(0xFF374151)
+                    )
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "DOCUMENTOS LEGALES",
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = DeepNavyBlue,
+                letterSpacing = 0.5.sp
+            )
+            LegalRow(icon = Icons.Default.Gavel, label = "Términos y Condiciones") {
+                viewModel.navigateTo(Screen.Legal("terminos"))
+            }
+            LegalRow(icon = Icons.Default.PrivacyTip, label = "Política de Privacidad") {
+                viewModel.navigateTo(Screen.Legal("privacidad"))
+            }
+            LegalRow(icon = Icons.Default.Cookie, label = "Política de Cookies") {
+                viewModel.navigateTo(Screen.Legal("cookies"))
+            }
+            LegalRow(icon = Icons.Default.Receipt, label = "Aviso de Comercio Electrónico") {
+                viewModel.navigateTo(Screen.Legal("aviso"))
+            }
+        }
+
+        OutlinedButton(
+            onClick = { viewModel.cerrarSesion() },
+            border = BorderStroke(1.5.dp, CrimsonAccent),
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp)
+                .testTag("btn_cerrar_sesion")
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Logout,
+                contentDescription = null,
+                tint = CrimsonAccent,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Cerrar sesión",
+                color = CrimsonAccent,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun LegalRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = SurfacePure,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, FieldBorderColor),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = DeepNavyBlue,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = label,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = DeepNavyBlue
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color(0xFF9CA3AF)
+            )
         }
     }
 }
