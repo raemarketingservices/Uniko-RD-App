@@ -44,7 +44,7 @@ fun ProductDetailScreen(
     val favorites by viewModel.favorites.collectAsState()
     val isFav = remember(favorites, productId) { favorites.any { it.itemId == productId } }
 
-    val product = products.firstOrNull { it.id == productId } ?: products.firstOrNull()
+    val product = products.firstOrNull { it.id == productId }
 
     var quantity by remember { mutableIntStateOf(1) }
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Desc, 1: Specs, 2: Reviews
@@ -63,7 +63,40 @@ fun ProductDetailScreen(
 
     if (product == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = CrimsonAccent)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (products.isEmpty()) {
+                    CircularProgressIndicator(color = CrimsonAccent)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Cargando producto…", color = Tertiary, fontSize = 13.sp)
+                } else {
+                    Icon(
+                        imageVector = Icons.Outlined.SearchOff,
+                        contentDescription = null,
+                        tint = Tertiary,
+                        modifier = Modifier.size(56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Producto no encontrado",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = CaribbeanNavy
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Puede que haya sido retirado del marketplace.",
+                        color = Tertiary,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { viewModel.navigateBack() },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = CrimsonAccent)
+                    ) {
+                        Text("Volver", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
         return
     }
@@ -166,31 +199,35 @@ fun ProductDetailScreen(
                         .align(Alignment.TopStart),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CrimsonAccent)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "OFERTA -15%",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    if (product.discountPercent > 0) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CrimsonAccent)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "OFERTA -${product.discountPercent}%",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CaribbeanNavy)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "MÁS VENDIDO",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    if (product.isBestSeller) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CaribbeanNavy)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "MÁS VENDIDO",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
@@ -245,31 +282,44 @@ fun ProductDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(SurfaceCanvas)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "SKU: ${product.sku}",
-                                fontSize = 11.sp,
-                                color = Tertiary,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                        if (product.sku.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(SurfaceCanvas)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "SKU: ${product.sku}",
+                                    fontSize = 11.sp,
+                                    color = Tertiary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(0.dp))
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(16.dp))
-                            Text(text = "4.9", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CaribbeanNavy)
-                            Text(text = "(42 reseñas)", fontSize = 11.sp, color = Tertiary)
+                            Text(
+                                text = "%.1f".format(product.rating),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = CaribbeanNavy
+                            )
+                            Text(
+                                text = "(${product.reviewCount} reseñas)",
+                                fontSize = 11.sp,
+                                color = Tertiary
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Audífonos Bluetooth Inalámbricos Sony WH-1000XM5 Noise Cancelling",
+                        text = product.title,
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = CaribbeanNavy,
@@ -290,13 +340,15 @@ fun ProductDetailScreen(
                                 color = CaribbeanNavy
                             )
                         )
-                        Text(
-                            text = "RD$ 21,500",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = Tertiary,
-                                textDecoration = TextDecoration.LineThrough
+                        if (product.originalPrice != null && product.originalPrice > product.price) {
+                            Text(
+                                text = "RD$ %,.0f".format(product.originalPrice),
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    color = Tertiary,
+                                    textDecoration = TextDecoration.LineThrough
+                                )
                             )
-                        )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -305,23 +357,27 @@ fun ProductDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(PrimaryFixed)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = "Ahorras RD$ 2,600",
-                                color = Primary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
+                        if (product.originalPrice != null && product.originalPrice > product.price) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(PrimaryFixed)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "Ahorras RD$ %,.0f".format(product.originalPrice - product.price),
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
 
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(14.dp))
-                            Text(text = "En stock disponible", color = SuccessGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        if (product.inStock) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(14.dp))
+                                Text(text = "En stock disponible", color = SuccessGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
 
@@ -416,7 +472,13 @@ fun ProductDetailScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "TC",
+                                    text = product.storeName
+                                        .trim()
+                                        .split(Regex("\\s+"))
+                                        .filter { it.isNotEmpty() }
+                                        .take(2)
+                                        .joinToString("") { it.first().uppercase() }
+                                        .ifEmpty { "UN" },
                                     color = Color.White,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 18.sp
@@ -425,26 +487,28 @@ fun ProductDetailScreen(
 
                             Column {
                                 Text(
-                                    text = "Tech Caribe RD",
+                                    text = product.storeName.ifEmpty { "Tienda UNIKO-RD" },
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp,
                                     color = CaribbeanNavy
                                 )
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(VerifiedBlue.copy(alpha = 0.1f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Icon(imageVector = Icons.Default.Verified, contentDescription = null, tint = VerifiedBlue, modifier = Modifier.size(12.dp))
-                                        Text(text = "Verificada con RNC", fontSize = 10.sp, color = VerifiedBlue, fontWeight = FontWeight.Bold)
+                                if (product.isVerified) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(VerifiedBlue.copy(alpha = 0.1f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Icon(imageVector = Icons.Default.Verified, contentDescription = null, tint = VerifiedBlue, modifier = Modifier.size(12.dp))
+                                            Text(text = "Verificada con RNC", fontSize = 10.sp, color = VerifiedBlue, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }
                         }
 
-                        TextButton(onClick = { viewModel.navigateTo(Screen.StoreProfile("store_tech_caribe")) }) {
+                        TextButton(onClick = { viewModel.navigateTo(Screen.StoreProfile(product.storeId)) }) {
                             Text("Ver tienda >", color = VerifiedBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
@@ -459,11 +523,16 @@ fun ProductDetailScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = Tertiary, modifier = Modifier.size(15.dp))
-                            Text("Santo Domingo D.N.", fontSize = 11.sp, color = Tertiary)
+                            Text(product.province.ifEmpty { "República Dominicana" }, fontSize = 11.sp, color = Tertiary)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(imageVector = Icons.Default.LocalShipping, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(15.dp))
-                            Text("Envíos (1-2 días)", fontSize = 11.sp, color = SuccessGreen, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (product.hasShipping) "Envíos (1-2 días)" else "Recogida en tienda",
+                                fontSize = 11.sp,
+                                color = SuccessGreen,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
                 }
@@ -577,7 +646,7 @@ fun ProductDetailScreen(
                         Tab(
                             selected = selectedTab == 2,
                             onClick = { selectedTab = 2 },
-                            text = { Text("Reseñas (42)", fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium, fontSize = 13.sp) }
+                            text = { Text("Reseñas (${product.reviewCount})", fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium, fontSize = 13.sp) }
                         )
                     }
 
@@ -586,24 +655,26 @@ fun ProductDetailScreen(
                             0 -> {
                                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Text(
-                                        text = "Los audífonos Sony WH-1000XM5 reescriben las reglas de la escucha sin distracciones. Equipados con dos procesadores y ocho micrófonos dedicados a la cancelación activa de ruido líder en el mercado.",
+                                        text = product.description.ifBlank {
+                                            "${product.title} disponible en ${product.storeName.ifEmpty { "UNIKO-RD" }}, ${product.province}. Producto original con garantía del vendedor y soporte a través del sistema de mensajes de UNIKO-RD."
+                                        },
                                         style = MaterialTheme.typography.bodyMedium.copy(color = CaribbeanNavy, lineHeight = 20.sp)
                                     )
 
                                     FeatureCard(
-                                        icon = Icons.Default.BatteryChargingFull,
-                                        title = "Batería de larga duración (30 horas)",
-                                        desc = "Hasta 30 horas de reproducción continua con NC activado. Con 3 minutos de carga obtienes 3 horas de uso con cargador USB-PD."
+                                        icon = Icons.Default.Shield,
+                                        title = "Compra protegida UNIKO-RD",
+                                        desc = "Comercio con cédula o RNC validado. Tu pago se coordina directo con la tienda verificada."
                                     )
                                     FeatureCard(
-                                        icon = Icons.Default.Hearing,
-                                        title = "Cancelación de Ruido Adaptativa",
-                                        desc = "El Auto NC Optimizer optimiza automáticamente el aislamiento según el entorno y la presión atmosférica."
+                                        icon = Icons.Default.LocalShipping,
+                                        title = if (product.hasShipping) "Envíos a todo el país" else "Recogida en la tienda",
+                                        desc = "Entrega coordinada en 24 a 72 horas según tu provincia en República Dominicana."
                                     )
                                     FeatureCard(
-                                        icon = Icons.Default.Favorite,
-                                        title = "Almohadillas Soft Fit Leather",
-                                        desc = "Ajuste ergonómico ultra liviano que reduce la presión en las orejas asegurando comodidad todo el día bajo el clima tropical."
+                                        icon = Icons.Default.AssignmentReturn,
+                                        title = "Devoluciones dentro de 7 días",
+                                        desc = "Si el producto llega defectuoso o distinto a la publicación, tienes 7 días para devolverlo."
                                     )
                                 }
                             }
@@ -613,11 +684,11 @@ fun ProductDetailScreen(
                                         .clip(RoundedCornerShape(12.dp))
                                         .border(1.dp, Color.LightGray.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                                 ) {
-                                    SpecRow("Conectividad", "Bluetooth 5.2 / Jack 3.5mm", true)
-                                    SpecRow("Peso aproximado", "250 gramos", false)
-                                    SpecRow("Puerto de Carga", "USB Type-C con carga rápida", true)
-                                    SpecRow("Micrófonos", "8 micrófonos con Beamforming", false)
-                                    SpecRow("Códecs soportados", "LDAC, AAC, SBC", true)
+                                    SpecRow("Categoría", product.category, true)
+                                    SpecRow("SKU", product.sku.ifEmpty { "—" }, false)
+                                    SpecRow("Tienda", product.storeName.ifEmpty { "UNIKO-RD" }, true)
+                                    SpecRow("Ubicación", product.province.ifEmpty { "República Dominicana" }, false)
+                                    SpecRow("Envío", if (product.hasShipping) "Envío nacional" else "Recogida local", true)
                                 }
                             }
                             2 -> {
@@ -625,12 +696,12 @@ fun ProductDetailScreen(
                                     ReviewItem(
                                         name = "Carlos M.",
                                         city = "Santo Domingo, D.N.",
-                                        comment = "Excelente producto 100% original. Llegó al día siguiente por mensajería en Bella Vista. El sonido y el ANC son impecables."
+                                        comment = "Excelente producto 100% original. Llegó al día siguiente por mensajería en Bella Vista. La tienda respondió rápido por WhatsApp."
                                     )
                                     ReviewItem(
                                         name = "Laura Pimentel",
                                         city = "Santiago de los Caballeros",
-                                        comment = "La tienda Tech Caribe RD respondió de inmediato por WhatsApp y me enviaron la factura con RNC sin problemas. Muy confiable."
+                                        comment = "Muy buena atención, me enviaron la factura con RNC sin problemas. Recomendado para comprar desde UNIKO-RD."
                                     )
                                 }
                             }

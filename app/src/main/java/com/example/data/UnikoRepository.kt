@@ -28,7 +28,12 @@ class UnikoRepository(private val db: AppDatabase) {
     suspend fun deleteAllStores() = db.storeDao().deleteAllStores()
 
     suspend fun addToCart(productId: String, quantity: Int = 1) {
-        db.cartDao().addToCart(CartItemEntity(productId = productId, quantity = quantity))
+        val previa = db.cartDao().getCantidad(productId)
+        if (previa == null) {
+            db.cartDao().addToCart(CartItemEntity(productId = productId, quantity = quantity))
+        } else {
+            db.cartDao().updateQuantity(productId, previa + quantity)
+        }
     }
 
     suspend fun removeFromCart(productId: String) = db.cartDao().removeFromCart(productId)
@@ -75,6 +80,7 @@ class UnikoRepository(private val db: AppDatabase) {
             if (productos.isNotEmpty()) {
                 db.productDao().deleteAllProducts()
                 db.productDao().insertProducts(productos)
+                db.cartDao().eliminarHuerfanos()
             }
             if (servicios.isNotEmpty()) {
                 db.serviceDao().deleteAllServices()

@@ -77,6 +77,12 @@ interface CartDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addToCart(item: CartItemEntity)
 
+    @Query("SELECT quantity FROM cart_items WHERE productId = :productId")
+    suspend fun getCantidad(productId: String): Int?
+
+    @Query("DELETE FROM cart_items WHERE productId NOT IN (SELECT id FROM products)")
+    suspend fun eliminarHuerfanos()
+
     @Query("DELETE FROM cart_items WHERE productId = :productId")
     suspend fun removeFromCart(productId: String)
 

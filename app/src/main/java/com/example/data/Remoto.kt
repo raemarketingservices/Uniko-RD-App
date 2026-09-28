@@ -311,4 +311,24 @@ object Remoto {
         if (code !in 200..299) return ResultadoAuth(ok = false, error = errorMsg(code, o))
         return ResultadoAuth(ok = true)
     }
+
+    fun enviarSolicitud(body: JSONObject): String? {
+        val req = Request.Builder()
+            .url(BASE + "/rest/v1/purchase_requests")
+            .header("apikey", API_KEY)
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json")
+            .post(body.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+        client.newCall(req).execute().use { resp ->
+            if (resp.isSuccessful) return null
+            val raw = resp.body?.string() ?: ""
+            return try {
+                val o = JSONObject(raw)
+                txt(o, "message").ifEmpty { "Error del servidor (${resp.code})." }
+            } catch (e: Exception) {
+                "Error del servidor (${resp.code})."
+            }
+        }
+    }
 }

@@ -329,8 +329,11 @@ fun CartBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val productMap = remember(products) { products.associateBy { it.id } }
-    val totalAmount = remember(cartItems, productMap) {
-        cartItems.sumOf { (productMap[it.productId]?.price ?: 0.0) * it.quantity }
+    val visibles = remember(cartItems, productMap) {
+        cartItems.filter { productMap.containsKey(it.productId) }
+    }
+    val totalAmount = remember(visibles, productMap) {
+        visibles.sumOf { (productMap[it.productId]?.price ?: 0.0) * it.quantity }
     }
 
     ModalBottomSheet(
@@ -360,7 +363,7 @@ fun CartBottomSheet(
                         tint = CaribbeanNavy
                     )
                     Text(
-                        text = "Tu Carrito (${cartItems.size})",
+                        text = "Tu Carrito (${visibles.size})",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = CaribbeanNavy
@@ -376,7 +379,7 @@ fun CartBottomSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (cartItems.isEmpty()) {
+            if (visibles.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -412,7 +415,7 @@ fun CartBottomSheet(
                         .heightIn(max = 340.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(cartItems) { item ->
+                    items(visibles) { item ->
                         val product = productMap[item.productId]
                         if (product != null) {
                             Row(

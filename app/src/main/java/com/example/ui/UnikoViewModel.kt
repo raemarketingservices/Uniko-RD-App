@@ -10,6 +10,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
 sealed class Screen {
     object Home : Screen()
@@ -23,6 +25,7 @@ sealed class Screen {
     object Auth : Screen()
     object Admin : Screen()
     data class Legal(val doc: String) : Screen()
+    object Checkout : Screen()
 }
 
 enum class BottomTab {
@@ -74,6 +77,7 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
             is Screen.Services, is Screen.ServiceDetail -> BottomTab.SERVICIOS
             is Screen.Stores, is Screen.StoreProfile -> BottomTab.TIENDAS
             is Screen.Auth, is Screen.Admin, is Screen.Legal -> BottomTab.CUENTA
+            is Screen.Checkout -> BottomTab.PRODUCTOS
             else -> BottomTab.INICIO
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BottomTab.INICIO)
@@ -97,6 +101,9 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _autenticando = MutableStateFlow(false)
     val autenticando: StateFlow<Boolean> = _autenticando.asStateFlow()
+
+    private val _enviandoCompra = MutableStateFlow(false)
+    val enviandoCompra: StateFlow<Boolean> = _enviandoCompra.asStateFlow()
 
     // Followed stores in session
     val followedStoreIds = MutableStateFlow<Set<String>>(emptySet())
@@ -178,29 +185,34 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             _autenticando.value = true
-            val r = withContext(Dispatchers.IO) {
-                Remoto.registrar(
-                    email = emailLimpio,
-                    password = password,
-                    nombres = nombres.trim(),
-                    apellidos = apellidos.trim(),
-                    cedula = cedula.trim(),
-                    telefono = telefono.trim(),
-                    esTienda = esTienda,
-                    aceptaTerminos = aceptaTerminos,
-                    aceptaMarketing = aceptaMarketing
-                )
-            }
-            _autenticando.value = false
-            when {
-                r.ok && r.usuario != null -> {
-                    SesionStore.guardar(getApplication(), r.usuario)
-                    _usuario.value = r.usuario
-                    showToast("¡Cuenta creada! Bienvenido/a a UNIKO-RD 🇩🇴")
+            try {
+                val r = withContext(Dispatchers.IO) {
+                    Remoto.registrar(
+                        email = emailLimpio,
+                        password = password,
+                        nombres = nombres.trim(),
+                        apellidos = apellidos.trim(),
+                        cedula = cedula.trim(),
+                        telefono = telefono.trim(),
+                        esTienda = esTienda,
+                        aceptaTerminos = aceptaTerminos,
+                        aceptaMarketing = aceptaMarketing
+                    )
                 }
-                r.ok && r.requiereConfirmacion ->
-                    showToast("Cuenta creada. Revisa tu correo para confirmarla.")
-                else -> showToast(r.error ?: "No se pudo crear la cuenta.", isSuccess = false)
+                when {
+                    r.ok && r.usuario != null -> {
+                        SesionStore.guardar(getApplication(), r.usuario)
+                        _usuario.value = r.usuario
+                        showToast("¡Cuenta creada! Bienvenido/a a UNIKO-RD 🇩🇴")
+                    }
+                    r.ok && r.requiereConfirmacion ->
+                        showToast("Cuenta creada. Revisa tu correo para confirmarla.")
+                    else -> showToast(r.error ?: "No se pudo crear la cuenta.", isSuccess = false)
+                }
+            } catch (e: Exception) {
+                showToast("Sin conexión. Revisa tu internet e inténtalo de nuevo.", isSuccess = false)
+            } finally {
+                _autenticando.value = false
             }
         }
     }
@@ -217,14 +229,19 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             _autenticando.value = true
-            val r = withContext(Dispatchers.IO) { Remoto.entrar(emailLimpio, password) }
-            _autenticando.value = false
-            if (r.ok && r.usuario != null) {
-                SesionStore.guardar(getApplication(), r.usuario)
-                _usuario.value = r.usuario
-                showToast("¡Bienvenido/a de vuelta a UNIKO-RD!")
-            } else {
-                showToast(r.error ?: "No se pudo iniciar sesión.", isSuccess = false)
+            try {
+                val r = withContext(Dispatchers.IO) { Remoto.entrar(emailLimpio, password) }
+                if (r.ok && r.usuario != null) {
+                    SesionStore.guardar(getApplication(), r.usuario)
+                    _usuario.value = r.usuario
+                    showToast("¡Bienvenido/a de vuelta a UNIKO-RD!")
+                } else {
+                    showToast(r.error ?: "No se pudo iniciar sesión.", isSuccess = false)
+                }
+            } catch (e: Exception) {
+                showToast("Sin conexión. Revisa tu internet e inténtalo de nuevo.", isSuccess = false)
+            } finally {
+                _autenticando.value = false
             }
         }
     }
@@ -299,8 +316,12 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addToCart(productId: String, qty: Int = 1) {
         viewModelScope.launch {
-            repository.addToCart(productId, qty)
-            showToast("Producto agregado al carrito 🇩🇴")
+            try {
+                repository.addToCart(productId, qty)
+                showToast("Producto agregado al carrito 🇩🇴")
+            } catch (e: Exception) {
+                showToast("No se pudo agregar al carrito. Intenta de nuevo.", isSuccess = false)
+            }
         }
     }
 
@@ -324,6 +345,109 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
     fun clearCart() {
         viewModelScope.launch {
             repository.clearCart()
+        }
+    }
+
+    fun enviarSolicitudCompra(
+        nombre: String,
+        direccion: String,
+        telefono: String,
+        correo: String,
+        cedula: String,
+        nota: String,
+        terminar: (ok: Boolean) -> Unit
+    ) {
+        val n = nombre.trim()
+        val dir = direccion.trim()
+        val tel = telefono.trim()
+        val mail = correo.trim()
+        val ced = cedula.trim()
+        when {
+            n.length < 3 -> {
+                showToast("Escribe tu nombre completo.", isSuccess = false)
+                terminar(false)
+                return
+            }
+            dir.length < 5 -> {
+                showToast("Escribe tu dirección de entrega.", isSuccess = false)
+                terminar(false)
+                return
+            }
+            tel.filter { it.isDigit() }.length < 10 -> {
+                showToast("Escribe un teléfono válido (10 dígitos).", isSuccess = false)
+                terminar(false)
+                return
+            }
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(mail).matches() -> {
+                showToast("Escribe un correo electrónico válido.", isSuccess = false)
+                terminar(false)
+                return
+            }
+            ced.filter { it.isDigit() }.length < 7 -> {
+                showToast("Escribe tu cédula o RNC válido.", isSuccess = false)
+                terminar(false)
+                return
+            }
+            cartItems.value.isEmpty() -> {
+                showToast("Tu carrito está vacío.", isSuccess = false)
+                terminar(false)
+                return
+            }
+        }
+
+        val mapaProductos = products.value.associateBy { it.id }
+        val itemsArr = JSONArray()
+        var total = 0.0
+        for (item in cartItems.value) {
+            val p = mapaProductos[item.productId] ?: continue
+            total += p.price * item.quantity
+            itemsArr.put(
+                JSONObject().apply {
+                    put("id", p.id)
+                    put("titulo", p.title)
+                    put("tienda", p.storeName)
+                    put("precio", p.price)
+                    put("cantidad", item.quantity)
+                }
+            )
+        }
+        if (itemsArr.length() == 0) {
+            showToast("Tu carrito está vacío.", isSuccess = false)
+            terminar(false)
+            return
+        }
+
+        val body = JSONObject().apply {
+            put("full_name", n)
+            put("address", dir)
+            put("phone", tel)
+            put("email", mail)
+            put("cedula", ced)
+            put("note", if (nota.isBlank()) JSONObject.NULL else nota.trim())
+            put("items", itemsArr)
+            put("total", total)
+            put("source", "app")
+            _usuario.value?.id?.takeIf { it.isNotEmpty() }?.let { put("user_id", it) }
+        }
+
+        viewModelScope.launch {
+            _enviandoCompra.value = true
+            try {
+                val err = withContext(Dispatchers.IO) { Remoto.enviarSolicitud(body) }
+                if (err == null) {
+                    repository.clearCart()
+                    showToast("¡Solicitud de compra enviada! Te contactaremos pronto.")
+                    terminar(true)
+                } else {
+                    showToast(err, isSuccess = false)
+                    terminar(false)
+                }
+            } catch (e: Exception) {
+                showToast("Sin conexión. Tu solicitud no se envió. Intenta de nuevo.", isSuccess = false)
+                terminar(false)
+            } finally {
+                _enviandoCompra.value = false
+            }
         }
     }
 

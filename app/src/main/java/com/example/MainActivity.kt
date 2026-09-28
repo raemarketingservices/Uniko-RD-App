@@ -66,7 +66,9 @@ fun UnikoApp(viewModel: UnikoViewModel = viewModel()) {
                     subtitle = "REPÚBLICA DOMINICANA",
                     showBackButton = false,
                     onSearchClick = { viewModel.navigateTo(Screen.Products) },
-                    cartItemCount = cartItems.sumOf { it.quantity },
+                    cartItemCount = cartItems
+                        .filter { ci -> products.any { it.id == ci.productId } }
+                        .sumOf { it.quantity },
                     onCartClick = { viewModel.isCartSheetVisible.value = true },
                     onAdminClick = { viewModel.navigateTo(Screen.Admin) }
                 )
@@ -111,6 +113,7 @@ fun UnikoApp(viewModel: UnikoViewModel = viewModel()) {
                     is Screen.Auth -> AuthScreen(viewModel = viewModel)
                     is Screen.Legal -> LegalDocScreen(doc = target.doc, viewModel = viewModel)
                     is Screen.Admin -> AdminScreen(viewModel = viewModel)
+                    is Screen.Checkout -> CheckoutScreen(viewModel = viewModel)
                 }
             }
 
@@ -135,7 +138,7 @@ fun UnikoApp(viewModel: UnikoViewModel = viewModel()) {
             onClearCart = { viewModel.clearCart() },
             onCheckoutClick = {
                 viewModel.isCartSheetVisible.value = false
-                viewModel.showToast("¡Orden generada! Coordinando entrega en República Dominicana...")
+                viewModel.navigateTo(Screen.Checkout)
             }
         )
     }
