@@ -397,6 +397,8 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
 
         val mapaProductos = products.value.associateBy { it.id }
         val itemsArr = JSONArray()
+        val storeIds = JSONArray()
+        val tiendasVistas = mutableSetOf<String>()
         var total = 0.0
         for (item in cartItems.value) {
             val p = mapaProductos[item.productId] ?: continue
@@ -410,6 +412,9 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
                     put("cantidad", item.quantity)
                 }
             )
+            if (p.storeId.isNotBlank() && tiendasVistas.add(p.storeId)) {
+                storeIds.put(p.storeId)
+            }
         }
         if (itemsArr.length() == 0) {
             showToast("Tu carrito está vacío.", isSuccess = false)
@@ -427,6 +432,7 @@ class UnikoViewModel(application: Application) : AndroidViewModel(application) {
             put("items", itemsArr)
             put("total", total)
             put("source", "app")
+            if (storeIds.length() > 0) put("store_ids", storeIds)
             _usuario.value?.id?.takeIf { it.isNotEmpty() }?.let { put("user_id", it) }
         }
 
