@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-Cx0BB4qO.js";import{t}from"./Proximamente-BErW3bnX.js";var n=e(),r=()=>(0,n.jsx)(t,{titulo:`Centro de ayuda`,descripcion:`Preguntas frecuentes y guías llegarán pronto.`});export{r as component};

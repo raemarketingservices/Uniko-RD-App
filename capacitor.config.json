@@ -1,0 +1,18 @@
+{
+  "appId": "com.unikord.mobile",
+  "appName": "UNIKO RD",
+  "webDir": "www",
+  "backgroundColor": "#CD002B",
+  "splashFullScreen": true,
+  "splashShowSpinner": false,
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scheme": "UnikoRD"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
